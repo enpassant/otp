@@ -129,7 +129,7 @@ fn buildCode(out_buf: []u8, secret: []const u8, counter: u64, digits: u8, algori
             const hmac = crypto.auth.hmac.HmacSha1;
             var buffer: [hmac.mac_length]u8 = undefined;
             var counter_buf: [8]u8 = undefined;
-            std.mem.writeIntBig(u64, &counter_buf, counter);
+            std.mem.writeInt(u64, &counter_buf, counter, std.builtin.Endian.big);
             var ctx = hmac.init(secret);
             ctx.update(counter_buf[0..]);
             ctx.final(buffer[0..]);
@@ -139,7 +139,7 @@ fn buildCode(out_buf: []u8, secret: []const u8, counter: u64, digits: u8, algori
             const hmac = crypto.auth.hmac.sha2.HmacSha256;
             var buffer: [hmac.mac_length]u8 = undefined;
             var counter_buf: [8]u8 = undefined;
-            std.mem.writeIntBig(u64, &counter_buf, counter);
+            std.mem.writeInt(u64, &counter_buf, counter, std.builtin.Endian.big);
             var ctx = hmac.init(secret);
             ctx.update(counter_buf[0..]);
             ctx.final(buffer[0..]);

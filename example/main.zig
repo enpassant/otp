@@ -4,21 +4,27 @@ const otp = @import("otp");
 const print = std.debug.print;
 
 pub fn main() !void {
+    const allocator = std.heap.page_allocator;
     const file = try fs.cwd().openFile("otp.rc", .{});
     defer file.close();
 
-    var line: [200]u8 = undefined;
+    var buffer: [1024]u8 = undefined;
     var key: ?[]const u8 = null;
     var issuer: ?[]const u8 = null;
     var key_buf: [20]u8 = undefined;
     var buf: [8]u8 = undefined;
     var options: otp.Options = .{};
+    var buf_reader = std.io.bufferedReader(file.reader());
+    var in_stream = buf_reader.reader();
 
-    while (try file.read(&line) > 0) {
-        var iter = std.mem.tokenize(u8, &line, " :=\r\n");
+    while (try in_stream.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
+        if (std.mem.startsWith(u8, line, "#")) {
+            continue;
+        }
+        var iter = std.mem.tokenizeAny(u8, line, " :=\r\n");
         while (iter.next()) |token| {
             if (std.mem.eql(u8, token, "key")) {
-                key = iter.next();
+                key = try std.mem.Allocator.dupe(allocator, u8, iter.next().?);
             } else if (std.mem.eql(u8, token, "Sha1")) {
                 options.algorithm = .Sha1;
             } else if (std.mem.eql(u8, token, "Sha256")) {
@@ -34,7 +40,7 @@ pub fn main() !void {
             } else if (std.mem.eql(u8, token, "60")) {
                 options.time_step = 60;
             } else if (std.mem.eql(u8, token, "issuer")) {
-                issuer = iter.next();
+                issuer = try std.mem.Allocator.dupe(allocator, u8, iter.next().?);
             } else if (std.mem.eql(u8, token, "options") or token.len == 0 or token[0] == 0) {} else {
                 print("Unknown token: {s}\n", .{token});
             }
@@ -42,9 +48,9 @@ pub fn main() !void {
             if (key != null and issuer != null) {
                 const totp = otp.Totp.init(&buf, options);
 
-                var seed = otp.decodeBase32(&key_buf, key.?);
-                var totp_code = try totp.generateCode(seed, std.time.timestamp());
-                var remaining_time = totp.remainingTime(std.time.timestamp());
+                const seed = otp.decodeBase32(&key_buf, key.?);
+                const totp_code = try totp.generateCode(seed, std.time.timestamp());
+                const remaining_time = totp.remainingTime(std.time.timestamp());
                 print("{s}: {s}, {d}s\n", .{
                     issuer.?,
                     totp_code,
