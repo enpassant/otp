@@ -1,1 +1,4 @@
 zig-cache
+otp.rc
+zig-out/bin
+.zig-cache
