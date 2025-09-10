@@ -1,7 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
-const otp = @import("otp");
 const print = std.debug.print;
+
+const otp = @import("otp");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -9,15 +10,15 @@ pub fn main() !void {
     defer file.close();
 
     var buffer: [1024]u8 = undefined;
+    var out_buffer: [1024]u8 = undefined;
     var key: ?[]const u8 = null;
     var issuer: ?[]const u8 = null;
     var key_buf: [20]u8 = undefined;
     var buf: [8]u8 = undefined;
     var options: otp.Options = .{};
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var in_stream = buf_reader.reader();
+    var in_stream = file.reader(&buffer);
 
-    while (try in_stream.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
+    while (in_stream.interface.takeDelimiterExclusive('\n')) |line| {
         if (std.mem.startsWith(u8, line, "#")) {
             continue;
         }
@@ -56,14 +57,17 @@ pub fn main() !void {
                     totp_code,
                     remaining_time,
                 });
-                try std.io.getStdOut().writer().print("{s}: {s}\n", .{
+                var stdout_writer = std.fs.File.stdout().writer(&out_buffer);
+                var stdout = &stdout_writer.interface;
+                try stdout.print("{s}: {s}\n", .{
                     issuer.?,
                     totp_code,
                 });
+                try stdout.flush();
                 issuer = null;
                 key = null;
                 options = .{};
             }
         }
-    }
+    } else |_| {}
 }

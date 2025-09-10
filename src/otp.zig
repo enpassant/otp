@@ -168,7 +168,7 @@ fn buildCode(out_buf: []u8, secret: []const u8, counter: u64, digits: u8, algori
 /// formatCode will try to parse the integer and return a string.
 /// An extra `0` will be added to the left to match the given length.
 fn formatCode(buf: []u8, val: u32, length: u8) usize {
-    const len = std.fmt.formatIntBuf(buf, val, 10, .lower, std.fmt.FormatOptions{ .width = length, .fill = '0' });
+    const len = std.fmt.printInt(buf, val, 10, .lower, std.fmt.Options{ .width = length, .fill = '0' });
     return len;
 }
 
